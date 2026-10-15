@@ -1,0 +1,12 @@
+{
+  "appId": "top.izuna.foliamajor",
+  "appName": "Folia",
+  "webDir": "dist",
+  "ios": {
+    "scheme": "App",
+    "minVersion": "15.0"
+  },
+  "server": {
+    "cleartext": true
+  }
+}

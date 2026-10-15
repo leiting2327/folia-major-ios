@@ -1,0 +1,71 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build-ipa:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Fetch upstream Folia source
+        run: |
+          git clone --depth 1 https://github.com/chthollyphile/folia-major.git folia
+          echo "Folia @ $(git -C folia rev-parse --short HEAD)"
+
+      - name: Install Folia dependencies
+        working-directory: folia
+        run: npm ci --allow-remote=all
+
+      - name: Build Folia web bundle
+        working-directory: folia
+        run: |
+          npm run build
+          test -d dist || { echo "dist missing"; exit 1; }
+          echo "web bundle ready"
+
+      - name: Install Capacitor and configure
+        working-directory: folia
+        run: |
+          npm install --no-save @capacitor/core@6 @capacitor/cli@6 @capacitor/ios@6
+          cp ../capacitor.config.json capacitor.config.json
+
+      - name: Add iOS platform and sync
+        working-directory: folia
+        run: |
+          npx cap add ios
+          npx cap sync ios
+
+      - name: Build unsigned iOS bundle (for sideloading)
+        working-directory: folia/ios/App
+        run: |
+          if [ -d App.xcworkspace ]; then
+            xcodebuild -workspace App.xcworkspace -scheme App \
+              -configuration Release -sdk iphoneos -derivedDataPath build \
+              CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+          else
+            xcodebuild -project App.xcodeproj -scheme App \
+              -configuration Release -sdk iphoneos -derivedDataPath build \
+              CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+          fi
+
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          cp -R folia/ios/App/build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -r -q Folia.ipa Payload
+          ls -lh Folia.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Folia-ipa
+          path: Folia.ipa
+          if-no-files-found: error
