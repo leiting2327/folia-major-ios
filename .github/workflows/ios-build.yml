@@ -51,6 +51,14 @@ jobs:
           npx cap add ios
           npx cap sync ios
 
+      - name: Allow cleartext HTTP (ATS) to backend IPs
+        working-directory: folia
+        run: |
+          PLIST=ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoads bool true" "$PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSAllowsArbitraryLoads bool true" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Print :NSAppTransportSecurity" "$PLIST"
+
       - name: Build unsigned iOS bundle (for sideloading)
         working-directory: folia/ios/App
         run: |
