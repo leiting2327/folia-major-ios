@@ -27,10 +27,15 @@ jobs:
 
       - name: Build Folia web bundle
         working-directory: folia
+        env:
+          VITE_NETEASE_API_BASE: http://100.119.115.88:3001
+          VITE_KUGOU_API_BASE: http://100.119.115.88:3002
+          VITE_QQ_API_BASE: http://100.119.115.88:3003
         run: |
           npm run build
           test -d dist || { echo "dist missing"; exit 1; }
           echo "web bundle ready"
+          grep -o '100\.119\.115\.88:[0-9]*' dist/assets/*.js | sort -u | head
 
       - name: Install Capacitor and configure
         working-directory: folia
