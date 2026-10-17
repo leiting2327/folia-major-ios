@@ -9,6 +9,8 @@ jobs:
   build-ipa:
     runs-on: macos-latest
     timeout-minutes: 60
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -35,7 +37,7 @@ jobs:
           npm run build
           test -d dist || { echo "dist missing"; exit 1; }
           echo "web bundle ready"
-          grep -o '100\.119\.115\.88:[0-9]*' dist/assets/*.js | sort -u | head
+          grep -o '100\.119\.115\.88:[0-9]*' dist/assets/*.js | sort -u
 
       - name: Install Capacitor and configure
         working-directory: folia
@@ -68,6 +70,16 @@ jobs:
           cp -R folia/ios/App/build/Build/Products/Release-iphoneos/App.app Payload/
           zip -r -q Folia.ipa Payload
           ls -lh Folia.ipa
+
+      - name: Upload IPA to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="ipa-$(date +%s)"
+          gh release create "$TAG" Folia.ipa \
+            --title "Folia IPA (with backends) $TAG" \
+            --notes "Unsigned IPA for sideloading (AltStore / Sideloadly / Feather). Backends: Netease/Kugou/QQ served from Tailscale 100.119.115.88."
+          echo "released tag=$TAG"
 
       - uses: actions/upload-artifact@v4
         with:
